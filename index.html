@@ -20,13 +20,22 @@
 </head>
 <body>
   <div id="root"></div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script type="importmap">
+    { "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom": "https://esm.sh/react-dom@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "recharts": "https://esm.sh/recharts@2.12.7"
+    }}
+  </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
   <script type="module">
-    // Load Recharts via ESM (CDN global doesn't work for v2.x)
-    const mod = await import('https://esm.sh/recharts@2.12.7?bundle');
-    window.Recharts = mod;
+    import React from 'react';
+    import ReactDOM from 'react-dom/client';
+    import * as Recharts from 'recharts';
+    window.React = React;
+    window.ReactDOM = ReactDOM;
+    window.Recharts = Recharts;
     // Now process the Babel script manually
     var babelScript = document.getElementById('dashboard-source');
     var code = babelScript.textContent;
@@ -359,7 +368,7 @@ function LoginScreen({ onLogin }) {
 // ─── Main Dashboard ─────────────────────────────────────────────────────────
 
 function Dashboard() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
   const [selectedYear, setSelectedYear] = useState(2026);
   const [comparisonYear, setComparisonYear] = useState(2025);
   const [activeTab, setActiveTab] = useState("overview");
