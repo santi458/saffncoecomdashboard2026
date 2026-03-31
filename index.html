@@ -30,13 +30,26 @@
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
   <script type="module">
-    import React from 'react';
-    import ReactDOM from 'react-dom/client';
+    import * as React from 'react';
+    import { createRoot } from 'react-dom/client';
     import * as Recharts from 'recharts';
+
     window.React = React;
-    window.ReactDOM = ReactDOM;
+    window.ReactDOM = { createRoot: createRoot };
     window.Recharts = Recharts;
-    // Now process the Babel script manually
+
+    // Wait for Babel to be available
+    function waitForBabel() {
+      return new Promise((resolve) => {
+        if (typeof Babel !== 'undefined') return resolve();
+        const check = setInterval(() => {
+          if (typeof Babel !== 'undefined') { clearInterval(check); resolve(); }
+        }, 50);
+      });
+    }
+
+    await waitForBabel();
+
     var babelScript = document.getElementById('dashboard-source');
     var code = babelScript.textContent;
     var transformed = Babel.transform(code, { presets: ['react'] }).code;
