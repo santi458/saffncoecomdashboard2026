@@ -23,18 +23,17 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
-  <script>
+  <script type="module">
     // Load Recharts via ESM (CDN global doesn't work for v2.x)
-    import('https://esm.sh/recharts@2.12.7?bundle&external=react,react-dom').then(function(mod) {
-      window.Recharts = mod;
-      // Now process the Babel script manually
-      var babelScript = document.getElementById('dashboard-source');
-      var code = babelScript.textContent;
-      var transformed = Babel.transform(code, { presets: ['react'] }).code;
-      var s = document.createElement('script');
-      s.textContent = transformed;
-      document.body.appendChild(s);
-    });
+    const mod = await import('https://esm.sh/recharts@2.12.7?bundle');
+    window.Recharts = mod;
+    // Now process the Babel script manually
+    var babelScript = document.getElementById('dashboard-source');
+    var code = babelScript.textContent;
+    var transformed = Babel.transform(code, { presets: ['react'] }).code;
+    var s = document.createElement('script');
+    s.textContent = transformed;
+    document.body.appendChild(s);
   </script>
   <script type="text/plain" id="dashboard-source">
     const { useState, useMemo, useCallback } = React;
