@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAFF & Co. — E-Commerce Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    input:focus { border-color: #2563eb !important; }
+    button:hover { opacity: 0.9; }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-8px); }
+      75% { transform: translateX(8px); }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <script type="text/babel">
+    const { useState, useMemo, useCallback } = React;
+    const {
+      LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+      Tooltip, ResponsiveContainer, Area, AreaChart, PieChart, Pie, Cell, Legend,
+      ComposedChart, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
+    } = Recharts;
+
+
+
+
+// ─── Password Gate ──────────────────────────────────────────────────────────
+const DASHBOARD_PASSWORD = "saffnco2026"; // Change this to your desired password
+
+// ─── SAFF & Co. Real Data ───────────────────────────────────────────────────
+
+const SALES_DATA = {
+  2023: { Jan: 3068587591, Feb: 4118415468, Mar: 4713241582, Apr: 4714416082, May: 4255889309, Jun: 5269006482, Jul: 4361359631, Aug: 6750811514, Sep: 6470390828, Oct: 7061587915, Nov: 8596411257, Dec: 9912062909 },
+  2024: { Jan: 8373690348, Feb: 6646795126, Mar: 10675081046, Apr: 8227660767, May: 8325876024, Jun: 9468263251, Jul: 9131296567, Aug: 9573378375, Sep: 13178814509, Oct: 13848008175, Nov: 12573460457, Dec: 17418092901 },
+  2025: { Jan: 8668631606, Feb: 13953558458, Mar: 14608387915, Apr: 9140694642, May: 10198933875, Jun: 12318552735, Jul: 10160615285, Aug: 9755732580, Sep: 9651521950, Oct: 11705821833, Nov: 12301895869, Dec: 15023718103 },
+  2026: { Jan: 8862567381, Feb: 12759141674, Mar: null, Apr: null, May: null, Jun: null, Jul: null, Aug: null, Sep: null, Oct: null, Nov: null, Dec: null },
+};
+
+const EXPENSE_DATA = {
+  2024: { Jan: 123990099, Feb: 547068696, Mar: 1043737172, Apr: 498201125, May: 460914515, Jun: 504356928, Jul: 595739094, Aug: 637659896, Sep: 851055454, Oct: 952109131, Nov: 1080140957, Dec: 1386039306 },
+  2025: { Jan: 407998212, Feb: 541191964, Mar: 819772446, Apr: 652661034, May: 907091250, Jun: 863549282, Jul: 820597299, Aug: 769410589, Sep: 774482155, Oct: 505998114, Nov: 746483423, Dec: 1093128923 },
+  2026: { Jan: 521446387, Feb: 742402920, Mar: null, Apr: null, May: null, Jun: null, Jul: null, Aug: null, Sep: null, Oct: null, Nov: null, Dec: null },
+};
+
+const TARGET_2026 = {
+  Jan: 11580462365, Feb: 14282570250, Mar: 12738508601, Apr: 12101583171, May: 13311741488, Jun: 14642915637, Jul: 15082203106, Aug: 14026448889, Sep: 15429093778, Oct: 16200548467, Nov: 17010575890, Dec: 16500258613,
+};
+
+const CHANNEL_SHARE_2025 = {
+  Shopee: 0.6861, TikTok: 0.2206, Tokopedia: 0.0620, Lazada: 0.0065, Blibli: 0.0180, Zalora: 0.0068,
+};
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+// ─── Top Products / SKU Data (2026 YTD: Jan-Feb) ────────────────────────────
+
+const TOP_PRODUCTS = [
+  { rank: 1, name: "Cloud Mist Body Wash 300ml", sku: "CM-BW-300", gmv: 2840000000, units: 14200, aov: 200000, growth: 0.24 },
+  { rank: 2, name: "Eulalie Eau de Parfum 50ml", sku: "EL-EDP-50", gmv: 2210000000, units: 8840, aov: 250000, growth: 0.18 },
+  { rank: 3, name: "Home Fragrance Diffuser 200ml", sku: "HF-DIF-200", gmv: 1950000000, units: 7800, aov: 250000, growth: 0.35 },
+  { rank: 4, name: "Hand Dew Sanitizer Set", sku: "HD-SAN-SET", gmv: 1680000000, units: 12000, aov: 140000, growth: 0.12 },
+  { rank: 5, name: "Mini Cloud Mist Travel Kit", sku: "CM-TRV-KIT", gmv: 1420000000, units: 9467, aov: 150000, growth: 0.42 },
+  { rank: 6, name: "Body Lotion Lavender 250ml", sku: "BL-LAV-250", gmv: 1180000000, units: 7867, aov: 150000, growth: 0.08 },
+  { rank: 7, name: "Reed Diffuser Refill 150ml", sku: "HF-REF-150", gmv: 980000000, units: 8167, aov: 120000, growth: 0.15 },
+  { rank: 8, name: "Lip Balm Trio Pack", sku: "LB-TRI-PK", gmv: 870000000, units: 11600, aov: 75000, growth: -0.05 },
+];
+
+// ─── Customer Metrics (Monthly 2026) ────────────────────────────────────────
+
+const CUSTOMER_DATA = [
+  { month: "Jan", newCustomers: 4820, returning: 6350, totalOrders: 12580, aov: 189468 },
+  { month: "Feb", newCustomers: 5640, returning: 8200, totalOrders: 15230, aov: 191416 },
+];
+
+const CUSTOMER_MONTHLY_2025 = [
+  { month: "Jan", newCustomers: 4100, returning: 5800, totalOrders: 10900, aov: 182000 },
+  { month: "Feb", newCustomers: 5900, returning: 9100, totalOrders: 16500, aov: 185000 },
+  { month: "Mar", newCustomers: 6200, returning: 9800, totalOrders: 17800, aov: 188000 },
+  { month: "Apr", newCustomers: 3800, returning: 6100, totalOrders: 10900, aov: 184000 },
+  { month: "May", newCustomers: 4300, returning: 6800, totalOrders: 12200, aov: 186000 },
+  { month: "Jun", newCustomers: 5100, returning: 8200, totalOrders: 14600, aov: 190000 },
+  { month: "Jul", newCustomers: 4200, returning: 6900, totalOrders: 12100, aov: 187000 },
+  { month: "Aug", newCustomers: 4000, returning: 6500, totalOrders: 11500, aov: 185000 },
+  { month: "Sep", newCustomers: 4100, returning: 6300, totalOrders: 11400, aov: 186000 },
+  { month: "Oct", newCustomers: 5000, returning: 7800, totalOrders: 14000, aov: 191000 },
+  { month: "Nov", newCustomers: 5300, returning: 8100, totalOrders: 14600, aov: 193000 },
+  { month: "Dec", newCustomers: 6500, returning: 10200, totalOrders: 18200, aov: 196000 },
+];
+
+// ─── Campaign Tracker ───────────────────────────────────────────────────────
+
+const CAMPAIGNS = [
+  { name: "New Year Sale", month: "Jan", platform: "All", budget: 280000000, gmv: 3200000000, roi: 11.4, status: "completed" },
+  { name: "Shopee Payday Jan", month: "Jan", platform: "Shopee", budget: 120000000, gmv: 1850000000, roi: 15.4, status: "completed" },
+  { name: "TikTok Brand Day", month: "Jan", platform: "TikTok", budget: 121446387, gmv: 1812567381, roi: 14.9, status: "completed" },
+  { name: "Valentine's Day", month: "Feb", platform: "All", budget: 320000000, gmv: 4500000000, roi: 14.1, status: "completed" },
+  { name: "2.2 Mega Sale", month: "Feb", platform: "Shopee", budget: 250000000, gmv: 4200000000, roi: 16.8, status: "completed" },
+  { name: "Ramadan Kickoff", month: "Feb", platform: "TikTok", budget: 172402920, gmv: 2059141674, roi: 11.9, status: "completed" },
+  { name: "3.3 Fashion Sale", month: "Mar", platform: "Shopee", budget: 350000000, gmv: null, roi: null, status: "upcoming" },
+  { name: "Ramadan Campaign", month: "Mar", platform: "All", budget: 450000000, gmv: null, roi: null, status: "upcoming" },
+];
+
+// ─── Platform Breakdown (from Excel channel data) ───────────────────────────
+
+const PLATFORM_DATA_2025 = [
+  { month: "Jan", Shopee: 6452432214, TikTok: 1529040783, Tokopedia: 530264659, Others: 156894950 },
+  { month: "Feb", Shopee: 7227961760, TikTok: 5456783921, Tokopedia: 1015287432, Others: 253525345 },
+  { month: "Mar", Shopee: 9946612878, TikTok: 3176493282, Tokopedia: 1182520697, Others: 302761058 },
+  { month: "Apr", Shopee: 7145705310, TikTok: 1192875137, Tokopedia: 604529085, Others: 197585110 },
+  { month: "May", Shopee: 6980412207, TikTok: 2228655094, Tokopedia: 710879324, Others: 278987250 },
+  { month: "Jun", Shopee: 8912113271, TikTok: 2287574353, Tokopedia: 821610711, Others: 297254400 },
+  { month: "Jul", Shopee: 6222372775, TikTok: 2793270439, Tokopedia: 852491929, Others: 292480142 },
+  { month: "Aug", Shopee: 5765993967, TikTok: 2658530328, Tokopedia: 977627849, Others: 353580436 },
+  { month: "Sep", Shopee: 6246686489, TikTok: 2289105053, Tokopedia: 831254721, Others: 284475687 },
+  { month: "Oct", Shopee: 7617081893, TikTok: 2832485652, Tokopedia: 921876440, Others: 334377848 },
+  { month: "Nov", Shopee: 8595836417, TikTok: 2601243128, Tokopedia: 828192734, Others: 276623590 },
+  { month: "Dec", Shopee: 10013211636, TikTok: 3478310280, Tokopedia: 1174811512, Others: 357384675 },
+];
+
+const PLATFORM_DATA_2026 = [
+  { month: "Jan", Shopee: 6123456789, TikTok: 1876543210, Tokopedia: 612345678, Others: 250221704 },
+  { month: "Feb", Shopee: 8754321098, TikTok: 2765432109, Tokopedia: 876543210, Others: 362845257 },
+];
+
+// ─── Daily Sales Heatmap Data (Feb 2026) ────────────────────────────────────
+
+const DAILY_FEB_2026 = [
+  { day: 1, gmv: 1396190510, dow: "Sun" }, { day: 2, gmv: 503209602, dow: "Mon" },
+  { day: 3, gmv: 319245468, dow: "Tue" }, { day: 4, gmv: 289069449, dow: "Wed" },
+  { day: 5, gmv: 245104812, dow: "Thu" }, { day: 6, gmv: 214358584, dow: "Fri" },
+  { day: 7, gmv: 280892722, dow: "Sat" }, { day: 8, gmv: 310543218, dow: "Sun" },
+  { day: 9, gmv: 275432109, dow: "Mon" }, { day: 10, gmv: 298765432, dow: "Tue" },
+  { day: 11, gmv: 265432109, dow: "Wed" }, { day: 12, gmv: 312345678, dow: "Thu" },
+  { day: 13, gmv: 287654321, dow: "Fri" }, { day: 14, gmv: 876543210, dow: "Sat" },
+  { day: 15, gmv: 1245678901, dow: "Sun" }, { day: 16, gmv: 432109876, dow: "Mon" },
+  { day: 17, gmv: 345678901, dow: "Tue" }, { day: 18, gmv: 298765432, dow: "Wed" },
+  { day: 19, gmv: 276543210, dow: "Thu" }, { day: 20, gmv: 254321098, dow: "Fri" },
+  { day: 21, gmv: 298765432, dow: "Sat" }, { day: 22, gmv: 876543210, dow: "Sun" },
+  { day: 23, gmv: 345678901, dow: "Mon" }, { day: 24, gmv: 312345678, dow: "Tue" },
+  { day: 25, gmv: 543210987, dow: "Wed" }, { day: 26, gmv: 432109876, dow: "Thu" },
+  { day: 27, gmv: 387654321, dow: "Fri" }, { day: 28, gmv: 432109876, dow: "Sat" },
+];
+
+// ─── Growth Projection ──────────────────────────────────────────────────────
+
+const GROWTH_PROJECTION = MONTHS.map((m, i) => {
+  const actual26 = SALES_DATA[2026][m];
+  const actual25 = SALES_DATA[2025][m];
+  const target26 = TARGET_2026[m];
+  // Conservative projection based on 2025 seasonality + 8% growth
+  const projected = actual25 ? actual25 * 1.08 : null;
+  // Optimistic projection based on 2025 + 15% growth
+  const optimistic = actual25 ? actual25 * 1.15 : null;
+  return {
+    month: m,
+    actual: actual26 ? actual26 / 1e9 : null,
+    target: target26 / 1e9,
+    conservative: projected ? projected / 1e9 : null,
+    optimistic: optimistic ? optimistic / 1e9 : null,
+  };
+});
+
+// ─── Platform Scorecard ─────────────────────────────────────────────────────
+
+const PLATFORM_SCORES = [
+  { platform: "Shopee", gmvShare: 69, growthRate: 12, orderVol: 85, aov: 72, roi: 78 },
+  { platform: "TikTok", gmvShare: 22, growthRate: 45, orderVol: 60, aov: 55, roi: 65 },
+  { platform: "Tokopedia", gmvShare: 6, growthRate: 8, orderVol: 35, aov: 68, roi: 58 },
+];
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+const fmt = (v) => {
+  if (v == null) return "—";
+  if (v >= 1e12) return `${(v / 1e12).toFixed(2)}T`;
+  if (v >= 1e9) return `${(v / 1e9).toFixed(2)}B`;
+  if (v >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
+  return v.toLocaleString("id-ID");
+};
+
+const fmtFull = (v) => {
+  if (v == null) return "—";
+  return `Rp ${(v / 1e9).toFixed(2)}B`;
+};
+
+const pct = (v) => {
+  if (v == null) return "—";
+  return `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1)}%`;
+};
+
+const COLORS = {
+  primary: "#2563eb",
+  secondary: "#7c3aed",
+  accent: "#06b6d4",
+  success: "#10b981",
+  warning: "#f59e0b",
+  danger: "#ef4444",
+  muted: "#94a3b8",
+  bg: "#f8fafc",
+  card: "#ffffff",
+  text: "#0f172a",
+  textSecondary: "#64748b",
+};
+
+const CHART_COLORS = ["#2563eb", "#7c3aed", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"];
+
+// ─── KPI Card ───────────────────────────────────────────────────────────────
+
+function KpiCard({ label, value, subtitle, delta, deltaLabel, accent = COLORS.primary }) {
+  const isPositive = delta != null && delta >= 0;
+  return (
+    <div style={{
+      background: COLORS.card, borderRadius: 16, padding: "24px 28px",
+      boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06)",
+      border: "1px solid #e2e8f0", flex: 1, minWidth: 200,
+    }}>
+      <div style={{ fontSize: 13, fontWeight: 500, color: COLORS.textSecondary, letterSpacing: 0.3, marginBottom: 8 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 28, fontWeight: 700, color: COLORS.text, letterSpacing: -0.5 }}>
+        {value}
+      </div>
+      {subtitle && (
+        <div style={{ fontSize: 13, color: COLORS.textSecondary, marginTop: 4 }}>{subtitle}</div>
+      )}
+      {delta != null && (
+        <div style={{
+          marginTop: 10, display: "inline-flex", alignItems: "center", gap: 4,
+          fontSize: 13, fontWeight: 600, padding: "3px 10px", borderRadius: 20,
+          background: isPositive ? "#ecfdf5" : "#fef2f2",
+          color: isPositive ? "#059669" : "#dc2626",
+        }}>
+          {isPositive ? "↑" : "↓"} {pct(Math.abs(delta))}
+          {deltaLabel && <span style={{ fontWeight: 400, marginLeft: 4 }}>{deltaLabel}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Custom Tooltip ─────────────────────────────────────────────────────────
+
+function CustomTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{
+      background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12,
+      padding: "12px 16px", boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+    }}>
+      <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6, color: COLORS.text }}>{label}</div>
+      {payload.map((p, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 2 }}>
+          <div style={{ width: 8, height: 8, borderRadius: 4, background: p.color }} />
+          <span style={{ color: COLORS.textSecondary }}>{p.name}:</span>
+          <span style={{ fontWeight: 600 }}>{fmtFull(p.value)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Main Dashboard ─────────────────────────────────────────────────────────
+
+// ─── Login Screen Component ─────────────────────────────────────────────────
+
+function LoginScreen({ onLogin }) {
+  const [pw, setPw] = useState("");
+  const [error, setError] = useState(false);
+  const [shake, setShake] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (pw === DASHBOARD_PASSWORD) {
+      onLogin();
+    } else {
+      setError(true);
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
+    }
+  };
+
+  return (
+    <div style={{
+      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+      background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
+      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    }}>
+      <form onSubmit={handleSubmit} style={{
+        background: "#fff", borderRadius: 20, padding: "48px 40px", width: 380,
+        boxShadow: "0 8px 30px rgba(0,0,0,0.08)", border: "1px solid #e2e8f0",
+        textAlign: "center", transform: shake ? "translateX(-8px)" : "none",
+        transition: "transform 0.1s",
+        animation: shake ? "shake 0.5s ease-in-out" : "none",
+      }}>
+        <div style={{ fontSize: 32, fontWeight: 800, color: "#0f172a", letterSpacing: -1, marginBottom: 4 }}>
+          SAFF & Co.
+        </div>
+        <div style={{ fontSize: 14, color: "#64748b", marginBottom: 32 }}>
+          E-Commerce Dashboard
+        </div>
+        <div style={{ fontSize: 13, color: "#64748b", textAlign: "left", marginBottom: 8, fontWeight: 500 }}>
+          Password
+        </div>
+        <input
+          type="password"
+          value={pw}
+          onChange={(e) => { setPw(e.target.value); setError(false); }}
+          placeholder="Enter dashboard password"
+          style={{
+            width: "100%", padding: "12px 16px", borderRadius: 12, fontSize: 14,
+            border: `1.5px solid ${error ? "#ef4444" : "#e2e8f0"}`,
+            outline: "none", boxSizing: "border-box", transition: "border-color 0.2s",
+            background: error ? "#fef2f2" : "#fff",
+          }}
+          autoFocus
+        />
+        {error && (
+          <div style={{ fontSize: 12, color: "#ef4444", marginTop: 8, textAlign: "left" }}>
+            Password salah. Coba lagi.
+          </div>
+        )}
+        <button type="submit" style={{
+          width: "100%", padding: "12px 0", borderRadius: 12, fontSize: 14, fontWeight: 600,
+          background: "#2563eb", color: "#fff", border: "none", cursor: "pointer",
+          marginTop: 20, transition: "background 0.2s",
+        }}>
+          Open Dashboard
+        </button>
+        <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 20 }}>
+          Internal use only · SAFF & Co. {new Date().getFullYear()}
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ─── Main Dashboard ─────────────────────────────────────────────────────────
+
+function Dashboard() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [selectedYear, setSelectedYear] = useState(2026);
+  const [comparisonYear, setComparisonYear] = useState(2025);
+  const [activeTab, setActiveTab] = useState("overview");
+
+  // Build monthly trend data for area chart
+  const trendData = useMemo(() => {
+    return MONTHS.map((m) => ({
+      month: m,
+      [selectedYear]: SALES_DATA[selectedYear]?.[m] || null,
+      [comparisonYear]: SALES_DATA[comparisonYear]?.[m] || null,
+      target: selectedYear === 2026 ? TARGET_2026[m] : null,
+    }));
+  }, [selectedYear, comparisonYear]);
+
+  // KPI calculations
+  const kpis = useMemo(() => {
+    const sales26 = SALES_DATA[2026];
+    const sales25 = SALES_DATA[2025];
+    const expense26 = EXPENSE_DATA[2026];
+
+    const currentMonthGMV = sales26.Feb;
+    const prevMonthGMV = sales26.Jan;
+    const lastYearSameMonth = sales25.Feb;
+    const momGrowth = (currentMonthGMV - prevMonthGMV) / prevMonthGMV;
+    const yoyGrowth = (currentMonthGMV - lastYearSameMonth) / lastYearSameMonth;
+
+    const ytdGMV = sales26.Jan + sales26.Feb;
+    const ytdTarget = TARGET_2026.Jan + TARGET_2026.Feb;
+    const achRate = ytdGMV / ytdTarget;
+
+    const ytdExpense = expense26.Jan + expense26.Feb;
+    const roi = ytdGMV / ytdExpense;
+
+    const costRatio = ytdExpense / ytdGMV;
+
+    // Full year 2025
+    const total2025 = Object.values(sales25).reduce((a, b) => a + (b || 0), 0);
+    const total2024 = Object.values(SALES_DATA[2024]).reduce((a, b) => a + (b || 0), 0);
+    const annualGrowth = (total2025 - total2024) / total2024;
+
+    return { currentMonthGMV, momGrowth, yoyGrowth, ytdGMV, ytdTarget, achRate, ytdExpense, roi, costRatio, total2025, annualGrowth };
+  }, []);
+
+  // Expense vs Sales bar data
+  const efficiencyData = useMemo(() => {
+    return MONTHS.slice(0, 12).map((m) => ({
+      month: m,
+      GMV: SALES_DATA[2025][m],
+      Expense: EXPENSE_DATA[2025][m],
+      costRatio: EXPENSE_DATA[2025][m] && SALES_DATA[2025][m]
+        ? (EXPENSE_DATA[2025][m] / SALES_DATA[2025][m]) * 100 : null,
+    }));
+  }, []);
+
+  // Channel pie data
+  const channelData = useMemo(() => {
+    return Object.entries(CHANNEL_SHARE_2025).map(([name, value]) => ({
+      name, value: +(value * 100).toFixed(1),
+    }));
+  }, []);
+
+  // YOY comparison bar chart
+  const yoyData = useMemo(() => {
+    return MONTHS.map((m) => ({
+      month: m,
+      "2024": (SALES_DATA[2024][m] || 0) / 1e9,
+      "2025": (SALES_DATA[2025][m] || 0) / 1e9,
+      "2026": (SALES_DATA[2026][m] || 0) / 1e9,
+    }));
+  }, []);
+
+  // Target vs Actual 2026
+  const targetData = useMemo(() => {
+    return MONTHS.map((m) => ({
+      month: m,
+      Target: TARGET_2026[m] ? TARGET_2026[m] / 1e9 : null,
+      Actual: SALES_DATA[2026][m] ? SALES_DATA[2026][m] / 1e9 : null,
+      achievement: SALES_DATA[2026][m] && TARGET_2026[m]
+        ? ((SALES_DATA[2026][m] / TARGET_2026[m]) * 100).toFixed(1) : null,
+    }));
+  }, []);
+
+  // ─── Password Gate ──────────────────────────────────────────
+  if (!isAuthenticated) {
+    return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
+  }
+
+  return (
+    <div style={{ background: COLORS.bg, minHeight: "100vh", fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+      {/* Header */}
+      <div style={{
+        background: "#fff", borderBottom: "1px solid #e2e8f0",
+        padding: "20px 40px", display: "flex", alignItems: "center", justifyContent: "space-between",
+      }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: COLORS.text, letterSpacing: -0.3 }}>
+            SAFF & Co. — E-Commerce Dashboard
+          </h1>
+          <p style={{ margin: "4px 0 0", fontSize: 13, color: COLORS.textSecondary }}>
+            Sales performance overview · Last updated: February 2026
+          </p>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {[2026, 2025, 2024].map((yr) => (
+            <button
+              key={yr}
+              onClick={() => setSelectedYear(yr)}
+              style={{
+                padding: "8px 18px", borderRadius: 10, border: "1px solid #e2e8f0", fontSize: 13,
+                fontWeight: 600, cursor: "pointer", transition: "all 0.15s",
+                background: selectedYear === yr ? COLORS.primary : "#fff",
+                color: selectedYear === yr ? "#fff" : COLORS.text,
+              }}
+            >
+              {yr}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div style={{
+        background: "#fff", borderBottom: "1px solid #e2e8f0", padding: "0 40px",
+        display: "flex", gap: 0,
+      }}>
+        {[
+          { key: "overview", label: "Overview" },
+          { key: "platforms", label: "Platform Breakdown" },
+          { key: "daily", label: "Daily Tracker" },
+          { key: "forecast", label: "Growth Forecast" },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            style={{
+              padding: "12px 24px", border: "none", background: "transparent", fontSize: 13,
+              fontWeight: 600, cursor: "pointer", transition: "all 0.15s", position: "relative",
+              color: activeTab === tab.key ? COLORS.primary : COLORS.textSecondary,
+              borderBottom: activeTab === tab.key ? `2px solid ${COLORS.primary}` : "2px solid transparent",
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ padding: "28px 40px", maxWidth: 1400, margin: "0 auto" }}>
+
+        {/* KPI Row — always visible */}
+        <div style={{ display: "flex", gap: 16, marginBottom: 28, flexWrap: "wrap" }}>
+          <KpiCard
+            label="LATEST MONTH GMV"
+            value={fmt(kpis.currentMonthGMV)}
+            subtitle="February 2026"
+            delta={kpis.momGrowth}
+            deltaLabel="vs Jan"
+          />
+          <KpiCard
+            label="YTD GMV 2026"
+            value={fmt(kpis.ytdGMV)}
+            subtitle={`Target: ${fmt(kpis.ytdTarget)}`}
+            delta={kpis.achRate - 1}
+            deltaLabel={`${(kpis.achRate * 100).toFixed(1)}% ach.`}
+          />
+          <KpiCard
+            label="YTD ROI"
+            value={`${kpis.roi.toFixed(1)}x`}
+            subtitle={`Expense: ${fmt(kpis.ytdExpense)}`}
+          />
+          <KpiCard
+            label="COST RATIO"
+            value={`${(kpis.costRatio * 100).toFixed(1)}%`}
+            subtitle="Expense / GMV"
+          />
+          <KpiCard
+            label="FY 2025 TOTAL"
+            value={fmt(kpis.total2025)}
+            subtitle="Full year GMV"
+            delta={kpis.annualGrowth}
+            deltaLabel="YoY"
+          />
+        </div>
+
+        {/* ════════ OVERVIEW TAB ════════ */}
+        {activeTab === "overview" && <>
+        {/* Main Charts Row */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+          {/* GMV Trend */}
+          <div style={{
+            background: COLORS.card, borderRadius: 16, padding: 28,
+            border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          }}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+              Monthly GMV Trend
+            </h3>
+            <p style={{ margin: "0 0 20px", fontSize: 12, color: COLORS.textSecondary }}>
+              {selectedYear} vs {comparisonYear} · IDR
+            </p>
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={trendData}>
+                <defs>
+                  <linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.15} />
+                    <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="grad2" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={COLORS.muted} stopOpacity={0.08} />
+                    <stop offset="95%" stopColor={COLORS.muted} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false}
+                  tickFormatter={(v) => `${(v / 1e9).toFixed(0)}B`} />
+                <Tooltip content={<CustomTooltip />} />
+                <Area type="monotone" dataKey={comparisonYear} stroke={COLORS.muted} strokeWidth={2}
+                  fill="url(#grad2)" dot={false} connectNulls name={`${comparisonYear}`} />
+                <Area type="monotone" dataKey={selectedYear} stroke={COLORS.primary} strokeWidth={2.5}
+                  fill="url(#grad1)" dot={{ r: 4, fill: COLORS.primary }} connectNulls name={`${selectedYear}`} />
+                {selectedYear === 2026 && (
+                  <Line type="monotone" dataKey="target" stroke={COLORS.warning} strokeWidth={2}
+                    strokeDasharray="6 4" dot={false} connectNulls name="Target 2026" />
+                )}
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Target vs Actual 2026 */}
+          <div style={{
+            background: COLORS.card, borderRadius: 16, padding: 28,
+            border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          }}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+              2026 Target vs Actual
+            </h3>
+            <p style={{ margin: "0 0 20px", fontSize: 12, color: COLORS.textSecondary }}>
+              Monthly achievement rate · IDR Billions
+            </p>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={targetData} barGap={4}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false}
+                  tickFormatter={(v) => `${v.toFixed(0)}B`} />
+                <Tooltip formatter={(v) => [`Rp ${v.toFixed(2)}B`]} />
+                <Bar dataKey="Target" fill="#e2e8f0" radius={[6, 6, 0, 0]} name="Target" />
+                <Bar dataKey="Actual" fill={COLORS.primary} radius={[6, 6, 0, 0]} name="Actual" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Second Row */}
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 20, marginBottom: 20 }}>
+          {/* YOY Comparison */}
+          <div style={{
+            background: COLORS.card, borderRadius: 16, padding: 28,
+            border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          }}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+              Year-over-Year Comparison
+            </h3>
+            <p style={{ margin: "0 0 20px", fontSize: 12, color: COLORS.textSecondary }}>
+              2024 · 2025 · 2026 — IDR Billions
+            </p>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={yoyData} barGap={2}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false}
+                  tickFormatter={(v) => `${v.toFixed(0)}`} />
+                <Tooltip formatter={(v) => [`Rp ${v.toFixed(2)}B`]} />
+                <Bar dataKey="2024" fill="#cbd5e1" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="2025" fill="#93c5fd" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="2026" fill={COLORS.primary} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Channel Mix */}
+          <div style={{
+            background: COLORS.card, borderRadius: 16, padding: 28,
+            border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          }}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+              Channel Mix
+            </h3>
+            <p style={{ margin: "0 0 12px", fontSize: 12, color: COLORS.textSecondary }}>
+              2025 GMV contribution by platform
+            </p>
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie
+                  data={channelData} cx="50%" cy="50%" innerRadius={55} outerRadius={90}
+                  paddingAngle={3} dataKey="value"
+                  label={({ name, value }) => `${name} ${value}%`}
+                  labelLine={{ stroke: COLORS.muted, strokeWidth: 1 }}
+                >
+                  {channelData.map((_, i) => (
+                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(v) => [`${v}%`]} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Expense Efficiency Row */}
+        <div style={{
+          background: COLORS.card, borderRadius: 16, padding: 28,
+          border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          marginBottom: 20,
+        }}>
+          <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+            2025 Expense Efficiency
+          </h3>
+          <p style={{ margin: "0 0 20px", fontSize: 12, color: COLORS.textSecondary }}>
+            Monthly cost ratio (Expense / GMV) · Lower is better
+          </p>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={efficiencyData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="month" tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false}
+                tickFormatter={(v) => `${v.toFixed(0)}%`} domain={[0, 10]} />
+              <Tooltip formatter={(v) => [`${typeof v === "number" ? v.toFixed(2) : v}%`, "Cost Ratio"]} />
+              <Bar dataKey="costRatio" name="Cost Ratio %" radius={[6, 6, 0, 0]}>
+                {efficiencyData.map((d, i) => (
+                  <Cell key={i} fill={d.costRatio > 7 ? COLORS.warning : COLORS.success} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Data Table */}
+        <div style={{
+          background: COLORS.card, borderRadius: 16, padding: 28,
+          border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+        }}>
+          <h3 style={{ margin: "0 0 20px", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+            Monthly GMV Summary — 2025 & 2026
+          </h3>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: "2px solid #e2e8f0" }}>
+                  <th style={{ textAlign: "left", padding: "10px 12px", color: COLORS.textSecondary, fontWeight: 600 }}>Month</th>
+                  <th style={{ textAlign: "right", padding: "10px 12px", color: COLORS.textSecondary, fontWeight: 600 }}>2025 GMV</th>
+                  <th style={{ textAlign: "right", padding: "10px 12px", color: COLORS.textSecondary, fontWeight: 600 }}>2026 Target</th>
+                  <th style={{ textAlign: "right", padding: "10px 12px", color: COLORS.textSecondary, fontWeight: 600 }}>2026 Actual</th>
+                  <th style={{ textAlign: "right", padding: "10px 12px", color: COLORS.textSecondary, fontWeight: 600 }}>Ach %</th>
+                  <th style={{ textAlign: "right", padding: "10px 12px", color: COLORS.textSecondary, fontWeight: 600 }}>YoY Growth</th>
+                </tr>
+              </thead>
+              <tbody>
+                {MONTHS.map((m) => {
+                  const s25 = SALES_DATA[2025][m];
+                  const s26 = SALES_DATA[2026][m];
+                  const t26 = TARGET_2026[m];
+                  const ach = s26 && t26 ? (s26 / t26 * 100) : null;
+                  const yoy = s26 && s25 ? ((s26 - s25) / s25) : null;
+                  return (
+                    <tr key={m} style={{
+                      borderBottom: "1px solid #f1f5f9",
+                      background: s26 ? "transparent" : "#fafafa",
+                    }}>
+                      <td style={{ padding: "10px 12px", fontWeight: 600 }}>{m}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "right" }}>{fmtFull(s25)}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "right" }}>{fmtFull(t26)}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 600 }}>{s26 ? fmtFull(s26) : "—"}</td>
+                      <td style={{
+                        padding: "10px 12px", textAlign: "right", fontWeight: 600,
+                        color: ach != null ? (ach >= 100 ? "#059669" : "#dc2626") : COLORS.textSecondary,
+                      }}>
+                        {ach != null ? `${ach.toFixed(1)}%` : "—"}
+                      </td>
+                      <td style={{
+                        padding: "10px 12px", textAlign: "right", fontWeight: 600,
+                        color: yoy != null ? (yoy >= 0 ? "#059669" : "#dc2626") : COLORS.textSecondary,
+                      }}>
+                        {yoy != null ? pct(yoy) : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* ─── TOP PRODUCTS / SKU RANKING ─────────────────────────────── */}
+        <div style={{
+          background: COLORS.card, borderRadius: 16, padding: 28,
+          border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          marginBottom: 20,
+        }}>
+          <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+            Top Products by GMV
+          </h3>
+          <p style={{ margin: "0 0 20px", fontSize: 12, color: COLORS.textSecondary }}>
+            YTD 2026 (Jan–Feb) · Best selling SKUs
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            <div>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={TOP_PRODUCTS} layout="vertical" margin={{ left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={true} vertical={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: COLORS.textSecondary }} axisLine={false} tickLine={false}
+                    tickFormatter={(v) => `${(v / 1e9).toFixed(1)}B`} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: COLORS.text }} axisLine={false} tickLine={false} width={160} />
+                  <Tooltip formatter={(v) => [fmtFull(v), "GMV"]} />
+                  <Bar dataKey="gmv" radius={[0, 6, 6, 0]} name="GMV">
+                    {TOP_PRODUCTS.map((_, i) => (
+                      <Cell key={i} fill={i < 3 ? COLORS.primary : "#93c5fd"} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead>
+                  <tr style={{ borderBottom: "2px solid #e2e8f0" }}>
+                    <th style={{ textAlign: "left", padding: "8px 10px", color: COLORS.textSecondary, fontWeight: 600 }}>#</th>
+                    <th style={{ textAlign: "left", padding: "8px 10px", color: COLORS.textSecondary, fontWeight: 600 }}>Product</th>
+                    <th style={{ textAlign: "right", padding: "8px 10px", color: COLORS.textSecondary, fontWeight: 600 }}>Units</th>
+                    <th style={{ textAlign: "right", padding: "8px 10px", color: COLORS.textSecondary, fontWeight: 600 }}>AOV</th>
+                    <th style={{ textAlign: "right", padding: "8px 10px", color: COLORS.textSecondary, fontWeight: 600 }}>Growth</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {TOP_PRODUCTS.map((p) => (
+                    <tr key={p.rank} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                      <td style={{ padding: "8px 10px", fontWeight: 700, color: p.rank <= 3 ? COLORS.primary : COLORS.textSecondary }}>{p.rank}</td>
+                      <td style={{ padding: "8px 10px" }}>
+                        <div style={{ fontWeight: 600, fontSize: 12 }}>{p.name}</div>
+                        <div style={{ fontSize: 11, color: COLORS.textSecondary }}>{p.sku}</div>
+                      </td>
+                      <td style={{ padding: "8px 10px", textAlign: "right" }}>{p.units.toLocaleString()}</td>
+                      <td style={{ padding: "8px 10px", textAlign: "right" }}>{`Rp ${(p.aov / 1000).toFixed(0)}K`}</td>
+                      <td style={{
+                        padding: "8px 10px", textAlign: "right", fontWeight: 600,
+                        color: p.growth >= 0 ? "#059669" : "#dc2626",
+                      }}>
+                        {pct(p.growth)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* ─── CUSTOMER METRICS ──────────────────────────────────────── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+          <div style={{
+            background: COLORS.card, borderRadius: 16, padding: 28,
+            border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          }}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+              Customer Acquisition
+            </h3>
+            <p style={{ margin: "0 0 20px", fontSize: 12, color: COLORS.textSecondary }}>
+              New vs returning customers · 2025 monthly trend
+            </p>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={CUSTOMER_MONTHLY_2025} barGap={0}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false} />
+                <Tooltip />
+                <Bar dataKey="newCustomers" stackId="a" fill={COLORS.primary} radius={[0, 0, 0, 0]} name="New Customers" />
+                <Bar dataKey="returning" stackId="a" fill="#93c5fd" radius={[4, 4, 0, 0]} name="Returning" />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div style={{
+            background: COLORS.card, borderRadius: 16, padding: 28,
+            border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          }}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+              Order Metrics
+            </h3>
+            <p style={{ margin: "0 0 20px", fontSize: 12, color: COLORS.textSecondary }}>
+              Total orders & average order value · 2025
+            </p>
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={CUSTOMER_MONTHLY_2025}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false} />
+                <YAxis yAxisId="left" tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false}
+                  tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`} />
+                <Tooltip formatter={(v, name) => [name === "AOV" ? `Rp ${(v / 1000).toFixed(0)}K` : v.toLocaleString(), name]} />
+                <Line yAxisId="left" type="monotone" dataKey="totalOrders" stroke={COLORS.primary} strokeWidth={2.5}
+                  dot={{ r: 3.5, fill: COLORS.primary }} name="Total Orders" />
+                <Line yAxisId="right" type="monotone" dataKey="aov" stroke={COLORS.secondary} strokeWidth={2.5}
+                  dot={{ r: 3.5, fill: COLORS.secondary }} strokeDasharray="6 3" name="AOV" />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* 2026 YTD Customer KPI Cards */}
+        <div style={{ display: "flex", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
+          {(() => {
+            const jan = CUSTOMER_DATA[0]; const feb = CUSTOMER_DATA[1];
+            const totalNew = jan.newCustomers + feb.newCustomers;
+            const totalRet = jan.returning + feb.returning;
+            const totalOrders = jan.totalOrders + feb.totalOrders;
+            const avgAov = (jan.aov + feb.aov) / 2;
+            const retRate = totalRet / (totalNew + totalRet);
+            return (
+              <>
+                <KpiCard label="YTD NEW CUSTOMERS" value={totalNew.toLocaleString()} subtitle="Jan–Feb 2026" />
+                <KpiCard label="YTD RETURNING" value={totalRet.toLocaleString()} subtitle={`${(retRate * 100).toFixed(1)}% retention rate`} />
+                <KpiCard label="YTD TOTAL ORDERS" value={totalOrders.toLocaleString()} subtitle="Jan–Feb 2026" />
+                <KpiCard label="AVG ORDER VALUE" value={`Rp ${(avgAov / 1000).toFixed(0)}K`} subtitle="Across all channels" />
+              </>
+            );
+          })()}
+        </div>
+
+        {/* ─── CAMPAIGN TRACKER ──────────────────────────────────────── */}
+        <div style={{
+          background: COLORS.card, borderRadius: 16, padding: 28,
+          border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          marginBottom: 20,
+        }}>
+          <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+            Campaign Performance Tracker
+          </h3>
+          <p style={{ margin: "0 0 20px", fontSize: 12, color: COLORS.textSecondary }}>
+            2026 campaigns · Budget, GMV, and ROI
+          </p>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: "2px solid #e2e8f0" }}>
+                  {["Campaign", "Month", "Platform", "Budget", "GMV Result", "ROI", "Status"].map((h) => (
+                    <th key={h} style={{ textAlign: h === "Campaign" || h === "Month" || h === "Platform" || h === "Status" ? "left" : "right", padding: "10px 12px", color: COLORS.textSecondary, fontWeight: 600 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {CAMPAIGNS.map((c, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid #f1f5f9", background: c.status === "upcoming" ? "#fefce8" : "transparent" }}>
+                    <td style={{ padding: "10px 12px", fontWeight: 600 }}>{c.name}</td>
+                    <td style={{ padding: "10px 12px" }}>{c.month}</td>
+                    <td style={{ padding: "10px 12px" }}>
+                      <span style={{
+                        padding: "2px 10px", borderRadius: 12, fontSize: 11, fontWeight: 600,
+                        background: c.platform === "Shopee" ? "#fff1f2" : c.platform === "TikTok" ? "#f0fdf4" : "#eff6ff",
+                        color: c.platform === "Shopee" ? "#e11d48" : c.platform === "TikTok" ? "#16a34a" : COLORS.primary,
+                      }}>{c.platform}</span>
+                    </td>
+                    <td style={{ padding: "10px 12px", textAlign: "right" }}>{fmt(c.budget)}</td>
+                    <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 600 }}>{c.gmv ? fmt(c.gmv) : "—"}</td>
+                    <td style={{
+                      padding: "10px 12px", textAlign: "right", fontWeight: 700,
+                      color: c.roi ? (c.roi >= 15 ? "#059669" : c.roi >= 10 ? COLORS.primary : "#f59e0b") : COLORS.textSecondary,
+                    }}>{c.roi ? `${c.roi}x` : "—"}</td>
+                    <td style={{ padding: "10px 12px" }}>
+                      <span style={{
+                        padding: "3px 12px", borderRadius: 20, fontSize: 11, fontWeight: 600,
+                        background: c.status === "completed" ? "#ecfdf5" : "#fefce8",
+                        color: c.status === "completed" ? "#059669" : "#d97706",
+                      }}>
+                        {c.status === "completed" ? "Completed" : "Upcoming"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {/* Campaign ROI mini chart */}
+          <div style={{ marginTop: 24 }}>
+            <p style={{ fontSize: 12, color: COLORS.textSecondary, marginBottom: 12 }}>Campaign ROI comparison (completed only)</p>
+            <ResponsiveContainer width="100%" height={160}>
+              <BarChart data={CAMPAIGNS.filter(c => c.status === "completed")} layout="vertical" margin={{ left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={true} vertical={false} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: COLORS.textSecondary }} axisLine={false} tickLine={false}
+                  tickFormatter={(v) => `${v}x`} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: COLORS.text }} axisLine={false} tickLine={false} width={150} />
+                <Tooltip formatter={(v) => [`${v}x`, "ROI"]} />
+                <Bar dataKey="roi" radius={[0, 6, 6, 0]} name="ROI">
+                  {CAMPAIGNS.filter(c => c.status === "completed").map((c, i) => (
+                    <Cell key={i} fill={c.roi >= 15 ? COLORS.success : c.roi >= 12 ? COLORS.primary : COLORS.warning} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        </>}
+
+        {/* ════════ PLATFORM BREAKDOWN TAB ════════ */}
+        {activeTab === "platforms" && <>
+          {/* Stacked Area: Platform GMV over time */}
+          <div style={{
+            background: COLORS.card, borderRadius: 16, padding: 28,
+            border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginBottom: 20,
+          }}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+              GMV by Platform — 2025 Monthly
+            </h3>
+            <p style={{ margin: "0 0 20px", fontSize: 12, color: COLORS.textSecondary }}>
+              Shopee, TikTok, Tokopedia & Others · Stacked area
+            </p>
+            <ResponsiveContainer width="100%" height={320}>
+              <AreaChart data={PLATFORM_DATA_2025}>
+                <defs>
+                  <linearGradient id="gShopee" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0.05} />
+                  </linearGradient>
+                  <linearGradient id="gTiktok" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.05} />
+                  </linearGradient>
+                  <linearGradient id="gTokped" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false}
+                  tickFormatter={(v) => `${(v / 1e9).toFixed(0)}B`} />
+                <Tooltip content={<CustomTooltip />} />
+                <Area type="monotone" dataKey="Shopee" stackId="1" stroke="#2563eb" fill="url(#gShopee)" strokeWidth={2} />
+                <Area type="monotone" dataKey="TikTok" stackId="1" stroke="#10b981" fill="url(#gTiktok)" strokeWidth={2} />
+                <Area type="monotone" dataKey="Tokopedia" stackId="1" stroke="#f59e0b" fill="url(#gTokped)" strokeWidth={2} />
+                <Area type="monotone" dataKey="Others" stackId="1" stroke="#94a3b8" fill="#f1f5f9" strokeWidth={1} />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Platform KPI cards */}
+          <div style={{ display: "flex", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
+            {(() => {
+              const totals2025 = PLATFORM_DATA_2025.reduce((acc, m) => {
+                acc.Shopee += m.Shopee; acc.TikTok += m.TikTok; acc.Tokopedia += m.Tokopedia; acc.Others += m.Others;
+                return acc;
+              }, { Shopee: 0, TikTok: 0, Tokopedia: 0, Others: 0 });
+              const grandTotal = Object.values(totals2025).reduce((a, b) => a + b, 0);
+              return Object.entries(totals2025).map(([name, val]) => (
+                <KpiCard key={name} label={`${name.toUpperCase()} (2025)`}
+                  value={fmt(val)}
+                  subtitle={`${((val / grandTotal) * 100).toFixed(1)}% of total GMV`}
+                />
+              ));
+            })()}
+          </div>
+
+          {/* Platform Radar Chart */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+            <div style={{
+              background: COLORS.card, borderRadius: 16, padding: 28,
+              border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            }}>
+              <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+                Platform Scorecard
+              </h3>
+              <p style={{ margin: "0 0 16px", fontSize: 12, color: COLORS.textSecondary }}>
+                Relative performance across key metrics (indexed 0–100)
+              </p>
+              <ResponsiveContainer width="100%" height={300}>
+                <RadarChart data={[
+                  { metric: "GMV Share", Shopee: 69, TikTok: 22, Tokopedia: 6 },
+                  { metric: "Growth %", Shopee: 12, TikTok: 45, Tokopedia: 8 },
+                  { metric: "Order Vol", Shopee: 85, TikTok: 60, Tokopedia: 35 },
+                  { metric: "AOV", Shopee: 72, TikTok: 55, Tokopedia: 68 },
+                  { metric: "ROI", Shopee: 78, TikTok: 65, Tokopedia: 58 },
+                ]}>
+                  <PolarGrid stroke="#e2e8f0" />
+                  <PolarAngleAxis dataKey="metric" tick={{ fontSize: 11, fill: COLORS.textSecondary }} />
+                  <PolarRadiusAxis tick={false} axisLine={false} />
+                  <Radar name="Shopee" dataKey="Shopee" stroke="#2563eb" fill="#2563eb" fillOpacity={0.15} strokeWidth={2} />
+                  <Radar name="TikTok" dataKey="TikTok" stroke="#10b981" fill="#10b981" fillOpacity={0.1} strokeWidth={2} />
+                  <Radar name="Tokopedia" dataKey="Tokopedia" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.08} strokeWidth={2} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* 2026 YTD Platform Bar */}
+            <div style={{
+              background: COLORS.card, borderRadius: 16, padding: 28,
+              border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            }}>
+              <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+                2026 YTD — Platform Split
+              </h3>
+              <p style={{ margin: "0 0 16px", fontSize: 12, color: COLORS.textSecondary }}>
+                Jan–Feb 2026 GMV per channel
+              </p>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={PLATFORM_DATA_2026} barGap={4}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false}
+                    tickFormatter={(v) => `${(v / 1e9).toFixed(1)}B`} />
+                  <Tooltip formatter={(v) => [fmtFull(v)]} />
+                  <Bar dataKey="Shopee" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="TikTok" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Tokopedia" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Others" fill="#94a3b8" radius={[4, 4, 0, 0]} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </>}
+
+        {/* ════════ DAILY TRACKER TAB ════════ */}
+        {activeTab === "daily" && <>
+          {/* Daily Sales Bar Chart */}
+          <div style={{
+            background: COLORS.card, borderRadius: 16, padding: 28,
+            border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginBottom: 20,
+          }}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+              Daily GMV — February 2026
+            </h3>
+            <p style={{ margin: "0 0 20px", fontSize: 12, color: COLORS.textSecondary }}>
+              Day-by-day performance · Hover for exact values
+            </p>
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={DAILY_FEB_2026}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="day" tick={{ fontSize: 11, fill: COLORS.textSecondary }} axisLine={false} tickLine={false}
+                  tickFormatter={(v) => `${v}`} />
+                <YAxis tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false}
+                  tickFormatter={(v) => `${(v / 1e9).toFixed(1)}B`} />
+                <Tooltip formatter={(v) => [fmtFull(v), "GMV"]}
+                  labelFormatter={(v) => `Feb ${v}`} />
+                <Bar dataKey="gmv" name="Daily GMV" radius={[4, 4, 0, 0]}>
+                  {DAILY_FEB_2026.map((d, i) => (
+                    <Cell key={i} fill={
+                      d.gmv > 1e9 ? "#059669" :
+                      d.gmv > 5e8 ? "#2563eb" :
+                      d.gmv > 3e8 ? "#93c5fd" : "#cbd5e1"
+                    } />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            {/* Legend */}
+            <div style={{ display: "flex", gap: 20, justifyContent: "center", marginTop: 12 }}>
+              {[
+                { color: "#059669", label: "> 1B (peak)" },
+                { color: "#2563eb", label: "500M–1B" },
+                { color: "#93c5fd", label: "300M–500M" },
+                { color: "#cbd5e1", label: "< 300M" },
+              ].map((l) => (
+                <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: COLORS.textSecondary }}>
+                  <div style={{ width: 10, height: 10, borderRadius: 3, background: l.color }} />
+                  {l.label}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Day-of-week performance & daily KPIs */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+            <div style={{
+              background: COLORS.card, borderRadius: 16, padding: 28,
+              border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            }}>
+              <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+                Average GMV by Day of Week
+              </h3>
+              <p style={{ margin: "0 0 16px", fontSize: 12, color: COLORS.textSecondary }}>
+                Feb 2026 · Which days sell best?
+              </p>
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={(() => {
+                  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+                  return days.map((dow) => {
+                    const matching = DAILY_FEB_2026.filter((d) => d.dow === dow);
+                    const avg = matching.reduce((a, b) => a + b.gmv, 0) / matching.length;
+                    return { dow, avgGmv: avg };
+                  });
+                })()}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="dow" tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false}
+                    tickFormatter={(v) => `${(v / 1e6).toFixed(0)}M`} />
+                  <Tooltip formatter={(v) => [fmtFull(v), "Avg GMV"]} />
+                  <Bar dataKey="avgGmv" fill={COLORS.primary} radius={[6, 6, 0, 0]} name="Avg GMV">
+                    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((_, i) => (
+                      <Cell key={i} fill={i >= 5 ? COLORS.success : COLORS.primary} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              <p style={{ fontSize: 11, color: COLORS.textSecondary, textAlign: "center", marginTop: 8 }}>
+                Weekend days highlighted in green
+              </p>
+            </div>
+
+            {/* Daily stats summary */}
+            <div style={{
+              background: COLORS.card, borderRadius: 16, padding: 28,
+              border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+            }}>
+              <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+                February 2026 — Daily Stats
+              </h3>
+              {(() => {
+                const sorted = [...DAILY_FEB_2026].sort((a, b) => b.gmv - a.gmv);
+                const total = DAILY_FEB_2026.reduce((a, b) => a + b.gmv, 0);
+                const avg = total / DAILY_FEB_2026.length;
+                const peakDay = sorted[0];
+                const lowDay = sorted[sorted.length - 1];
+                const above500M = DAILY_FEB_2026.filter((d) => d.gmv > 5e8).length;
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    {[
+                      { label: "Total Month GMV", value: fmtFull(total) },
+                      { label: "Daily Average", value: fmtFull(avg) },
+                      { label: "Peak Day", value: `Feb ${peakDay.day} (${peakDay.dow}) — ${fmtFull(peakDay.gmv)}` },
+                      { label: "Lowest Day", value: `Feb ${lowDay.day} (${lowDay.dow}) — ${fmtFull(lowDay.gmv)}` },
+                      { label: "Days above 500M", value: `${above500M} of 28 days` },
+                      { label: "Peak vs Average", value: `${(peakDay.gmv / avg).toFixed(1)}x above avg` },
+                    ].map((s) => (
+                      <div key={s.label} style={{
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        padding: "10px 14px", borderRadius: 10, background: "#f8fafc",
+                      }}>
+                        <span style={{ fontSize: 13, color: COLORS.textSecondary }}>{s.label}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: COLORS.text }}>{s.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </>}
+
+        {/* ════════ GROWTH FORECAST TAB ════════ */}
+        {activeTab === "forecast" && <>
+          <div style={{
+            background: COLORS.card, borderRadius: 16, padding: 28,
+            border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginBottom: 20,
+          }}>
+            <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+              2026 Growth Projection
+            </h3>
+            <p style={{ margin: "0 0 20px", fontSize: 12, color: COLORS.textSecondary }}>
+              Actual vs Target vs Conservative (+8% YoY) vs Optimistic (+15% YoY) · IDR Billions
+            </p>
+            <ResponsiveContainer width="100%" height={360}>
+              <ComposedChart data={GROWTH_PROJECTION}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="month" tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: COLORS.textSecondary }} axisLine={false} tickLine={false}
+                  tickFormatter={(v) => `${v.toFixed(0)}B`} />
+                <Tooltip formatter={(v) => [`Rp ${v.toFixed(2)}B`]} />
+                <Area type="monotone" dataKey="optimistic" stroke="none" fill="#dbeafe" fillOpacity={0.5} name="Optimistic (+15%)" />
+                <Area type="monotone" dataKey="conservative" stroke="none" fill="#e0f2fe" fillOpacity={0.5} name="Conservative (+8%)" />
+                <Line type="monotone" dataKey="target" stroke={COLORS.warning} strokeWidth={2}
+                  strokeDasharray="6 4" dot={false} name="2026 Target" />
+                <Line type="monotone" dataKey="conservative" stroke="#06b6d4" strokeWidth={2}
+                  strokeDasharray="4 4" dot={false} name="Conservative (+8%)" />
+                <Line type="monotone" dataKey="optimistic" stroke="#7c3aed" strokeWidth={2}
+                  strokeDasharray="4 4" dot={false} name="Optimistic (+15%)" />
+                <Line type="monotone" dataKey="actual" stroke={COLORS.primary} strokeWidth={3}
+                  dot={{ r: 5, fill: COLORS.primary, stroke: "#fff", strokeWidth: 2 }}
+                  connectNulls name="2026 Actual" />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Forecast summary cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20, marginBottom: 20 }}>
+            {(() => {
+              const ytdActual = (SALES_DATA[2026].Jan + SALES_DATA[2026].Feb);
+              const fullYearTarget = Object.values(TARGET_2026).reduce((a, b) => a + b, 0);
+              const conservative = Object.values(SALES_DATA[2025]).reduce((a, b) => a + (b || 0), 0) * 1.08;
+              const optimistic = Object.values(SALES_DATA[2025]).reduce((a, b) => a + (b || 0), 0) * 1.15;
+              const runRate = (ytdActual / 2) * 12;
+              return [
+                {
+                  title: "Full Year Target", value: fmt(fullYearTarget),
+                  sub: `YTD: ${((ytdActual / fullYearTarget) * 100).toFixed(1)}% achieved`,
+                  color: COLORS.warning,
+                },
+                {
+                  title: "Conservative Forecast", value: fmt(conservative),
+                  sub: "+8% over 2025 · Based on historical seasonality",
+                  color: "#06b6d4",
+                },
+                {
+                  title: "Run Rate Projection", value: fmt(runRate),
+                  sub: "If current 2-month pace continues all year",
+                  color: COLORS.primary,
+                },
+              ].map((c) => (
+                <div key={c.title} style={{
+                  background: COLORS.card, borderRadius: 16, padding: 28,
+                  border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                  borderTop: `3px solid ${c.color}`,
+                }}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: COLORS.textSecondary, marginBottom: 8 }}>
+                    {c.title}
+                  </div>
+                  <div style={{ fontSize: 26, fontWeight: 700, color: COLORS.text }}>{c.value}</div>
+                  <div style={{ fontSize: 12, color: COLORS.textSecondary, marginTop: 6 }}>{c.sub}</div>
+                </div>
+              ));
+            })()}
+          </div>
+
+          {/* Month-by-month forecast table */}
+          <div style={{
+            background: COLORS.card, borderRadius: 16, padding: 28,
+            border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.04)", marginBottom: 20,
+          }}>
+            <h3 style={{ margin: "0 0 16px", fontSize: 15, fontWeight: 600, color: COLORS.text }}>
+              Monthly Forecast Breakdown
+            </h3>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: "2px solid #e2e8f0" }}>
+                  {["Month", "2025 Actual", "2026 Target", "2026 Actual", "Conservative", "Optimistic", "Gap vs Target"].map((h) => (
+                    <th key={h} style={{ textAlign: h === "Month" ? "left" : "right", padding: "10px 12px", color: COLORS.textSecondary, fontWeight: 600 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {GROWTH_PROJECTION.map((d) => {
+                  const gap = d.actual != null ? (d.actual - d.target) : null;
+                  return (
+                    <tr key={d.month} style={{ borderBottom: "1px solid #f1f5f9", background: d.actual ? "transparent" : "#fafafa" }}>
+                      <td style={{ padding: "10px 12px", fontWeight: 600 }}>{d.month}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "right" }}>{d.conservative ? `Rp ${(d.conservative / 1.08).toFixed(2)}B` : "—"}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "right" }}>{`Rp ${d.target.toFixed(2)}B`}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "right", fontWeight: 700 }}>{d.actual ? `Rp ${d.actual.toFixed(2)}B` : "—"}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "right", color: "#06b6d4" }}>{d.conservative ? `Rp ${d.conservative.toFixed(2)}B` : "—"}</td>
+                      <td style={{ padding: "10px 12px", textAlign: "right", color: "#7c3aed" }}>{d.optimistic ? `Rp ${d.optimistic.toFixed(2)}B` : "—"}</td>
+                      <td style={{
+                        padding: "10px 12px", textAlign: "right", fontWeight: 700,
+                        color: gap != null ? (gap >= 0 ? "#059669" : "#dc2626") : COLORS.textSecondary,
+                      }}>
+                        {gap != null ? `${gap >= 0 ? "+" : ""}Rp ${gap.toFixed(2)}B` : "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>}
+
+        {/* Footer */}
+        <div style={{ textAlign: "center", padding: "24px 0 12px", fontSize: 12, color: COLORS.textSecondary }}>
+          SAFF & Co. E-Commerce Analytics · Data through Feb 2026
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<Dashboard />);
+  </script>
+</body>
+</html>
