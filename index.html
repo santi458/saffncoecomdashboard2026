@@ -20,36 +20,27 @@
 </head>
 <body>
   <div id="root"></div>
-  <script type="importmap">
-    { "imports": {
-        "react": "https://esm.sh/react@18.2.0",
-        "react-dom": "https://esm.sh/react-dom@18.2.0",
-        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-        "recharts": "https://esm.sh/recharts@2.12.7"
-    }}
-  </script>
+  <!-- React & ReactDOM UMD (single global instance) -->
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
-  <script type="module">
-    import * as React from 'react';
-    import { createRoot } from 'react-dom/client';
-    import * as Recharts from 'recharts';
 
-    window.React = React;
-    window.ReactDOM = { createRoot: createRoot };
+  <!-- Importmap: shim bare specifiers to re-export UMD globals so Recharts uses the SAME React -->
+  <script type="importmap">
+  { "imports": {
+      "react": "data:text/javascript,const R=window.React;export default R;export const{Children,Component,Fragment,Profiler,PureComponent,StrictMode,Suspense,cloneElement,createContext,createElement,createFactory,createRef,forwardRef,isValidElement,lazy,memo,startTransition,useCallback,useContext,useDebugValue,useDeferredValue,useEffect,useId,useImperativeHandle,useInsertionEffect,useLayoutEffect,useMemo,useReducer,useRef,useState,useSyncExternalStore,useTransition,version}=R;",
+      "react-dom": "data:text/javascript,const RD=window.ReactDOM;export default RD;export const{createPortal,flushSync,render,unmountComponentAtNode,createRoot,hydrateRoot,version}=RD;",
+      "react-dom/client": "data:text/javascript,export const{createRoot,hydrateRoot}=window.ReactDOM;",
+      "react/jsx-runtime": "data:text/javascript,const R=window.React;export const jsx=R.createElement;export const jsxs=R.createElement;export const Fragment=R.Fragment;"
+  }}
+  </script>
+
+  <!-- Load Recharts as ESM; ?external keeps bare 'react' imports so importmap resolves them to UMD globals -->
+  <script type="module">
+    const Recharts = await import('https://esm.sh/recharts@2.12.7?external=react,react-dom,react/jsx-runtime');
     window.Recharts = Recharts;
 
-    // Wait for Babel to be available
-    function waitForBabel() {
-      return new Promise((resolve) => {
-        if (typeof Babel !== 'undefined') return resolve();
-        const check = setInterval(() => {
-          if (typeof Babel !== 'undefined') { clearInterval(check); resolve(); }
-        }, 50);
-      });
-    }
-
-    await waitForBabel();
-
+    // Compile and run dashboard JSX
     var babelScript = document.getElementById('dashboard-source');
     var code = babelScript.textContent;
     var transformed = Babel.transform(code, { presets: ['react'] }).code;
